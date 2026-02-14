@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach to Process",
+            "type": "go",
+            "request": "attach",
+            "mode": "local",
+            "processId": 0
+        },
+        {
+            "name": "Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}"
+        },
+        {
+            "name": "Run: Scan Mode",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/app/main.go",
+            "args": [
+                "--mode=scan",
+                "--input=data/input/sample.docx"
+            ]
+        },
+        {
+            "name": "Run: Patch Mode",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/app/main.go",
+            "args": [
+                "--mode=patch",
+                "--doc=data/output/cleaned_sample.docx",
+                "--patch=data/patches/patch.json"
+            ]
+        }
+    ]
+}
