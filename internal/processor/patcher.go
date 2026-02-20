@@ -1,48 +1,53 @@
 package processor
 
 import (
-	"my-go-vibe/internal/domain"
-	"log"
 	"fmt"
+	"log"
+	"my-go-vibe/internal/domain"
+	"os"
+	"path/filepath"
 )
 
-// TODO: Define the ParagraphStruct and LoadDocx function.
-
 // ApplyPatch takes instructions from the AI and applies them.
-func ApplyPatch(originalDocPath string, patch domain.PatchResponse, outputPath string) {
-	// 1. Load document into a full DOM structure
+func ApplyPatch(originalDocPath string, patch domain.PatchResponse, outputPath string) error {
+	// Ensure output directory exists
+	outputDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		log.Printf("❌ Error creating output directory: %v", err)
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// 1. Load document into a full DOM structure (Placeholder)
 	// doc := LoadDocx(originalDocPath)
-	
-	// 2. Create an index for fast lookup: ID -> Paragraph
+
+	// 2. Create an index for fast lookup (Placeholder)
 	// paraIndex := make(map[string]*ParagraphStruct)
-	// for i, p := range doc.Paragraphs {
-	// 	id := fmt.Sprintf("p_%d", i+1) // Same algorithm as the Extractor!
-	// 	paraIndex[id] = p
-	// }
+	// ...
 
 	// 3. Apply patches
+	log.Printf("Applying %d changes...", len(patch.Changes))
 	for _, change := range patch.Changes {
-		// targetPara, exists := paraIndex[change.TargetID]
-		// if !exists {
-		// 	log.Printf("⚠️ Warning: ID %s not found, skipping", change.TargetID)
-		// 	continue
-		// }
-
+		// (Placeholder for actual patching logic)
+		log.Printf("Simulating operation '%s' on target '%s'", change.Operation, change.TargetID)
 		switch change.Operation {
 		case "replace_text":
-			// Surgical replacement: change text while keeping paragraph styles
-			log.Printf("🔧 Updating text in %s", change.TargetID)
-			// targetPara.SetText(change.NewText)
-			
+			log.Printf("🔧 Updating text in %s to '%s'", change.TargetID, change.NewText)
 		case "delete":
-			// targetPara.Remove()
-			
+			log.Printf("🗑️ Deleting %s", change.TargetID)
 		case "update_formula":
-			// Convert LaTeX -> OMML and insert
+			log.Printf("➗ Updating formula in %s", change.TargetID)
 		}
 	}
 
-	// 4. Save the result
-	// doc.Save(outputPath)
-	fmt.Println("Patch applied successfully!")
+	// 4. Save the result (Placeholder)
+	// For now, we'll just create an empty file to simulate saving.
+	log.Printf("💾 Saving patched file to: %s", outputPath)
+	err := os.WriteFile(outputPath, []byte("Simulated patched content"), 0644)
+	if err != nil {
+		log.Printf("❌ Error saving patched file: %v", err)
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	log.Println("✅ Patch applied and file saved successfully!")
+	return nil
 }

@@ -3,6 +3,9 @@ package ui
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"my-go-vibe/internal/domain"
+	"my-go-vibe/internal/processor"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,8 +16,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"my-go-vibe/internal/domain"
-	"my-go-vibe/internal/processor"
 )
 
 type GUI struct {
@@ -31,15 +32,23 @@ type GUI struct {
 
 	selectedInputFile  string
 	selectedOutputFile string
+
+	rootPath string
 }
 
 func newGUI() *GUI {
 	a := app.New()
 	w := a.NewWindow("my-go-vibe GUI")
 
+	root, err := filepath.Abs(".")
+	if err != nil {
+		log.Fatalf("❌ Error getting absolute path: %v", err)
+	}
+
 	g := &GUI{
-		app: a,
-		win: w,
+		app:      a,
+		win:      w,
+		rootPath: root,
 	}
 
 	g.setupUI()
@@ -140,7 +149,10 @@ func (g *GUI) createContent() fyne.CanvasObject {
 	// Bottom Panel
 	bottomPanel := container.NewBorder(
 		nil,
-		widget.NewButton("Open File", g.openOutputFile),
+		container.NewGridWithColumns(2,
+			widget.NewButton("Open Input Folder", g.openInputFolder),
+			widget.NewButton("Open Output Folder", g.openOutputFolder),
+		),
 		nil,
 		nil,
 		container.NewScroll(g.outputFileList),
@@ -159,12 +171,14 @@ func (g *GUI) createContent() fyne.CanvasObject {
 }
 
 func (g *GUI) refreshInputFiles() {
-	g.inputFiles = g.findFiles("data/input", ".docx")
+	inputDir := filepath.Join(g.rootPath, "data", "input")
+	g.inputFiles = g.findFiles(inputDir, ".docx")
 	g.inputFileList.Refresh()
 }
 
 func (g *GUI) refreshOutputFiles() {
-	g.outputFiles = g.findFiles("data/output", ".docx")
+	outputDir := filepath.Join(g.rootPath, "data", "output")
+	g.outputFiles = g.findFiles(outputDir, ".docx")
 	g.outputFileList.Refresh()
 }
 
@@ -175,12 +189,15 @@ func (g *GUI) findFiles(dir, suffix string) []string {
 			return err
 		}
 		if !info.IsDir() && strings.HasSuffix(info.Name(), suffix) {
+			// We only want the base name, not the full path
 			files = append(files, info.Name())
 		}
 		return nil
 	})
 	if err != nil {
-		dialog.ShowError(err, g.win)
+		if !os.IsNotExist(err) { // Don't show error if the directory just doesn't exist yet
+			dialog.ShowError(err, g.win)
+		}
 	}
 	return files
 }
@@ -191,7 +208,7 @@ func (g *GUI) scanFile() {
 		return
 	}
 
-	filePath := filepath.Join("data/input", g.selectedInputFile)
+	filePath := filepath.Join(g.rootPath, "data", "input", g.selectedInputFile)
 	content, err := processor.ExtractContent(filePath)
 	if err != nil {
 		dialog.ShowError(err, g.win)
@@ -225,28 +242,31 @@ func (g *GUI) applyPatch() {
 		return
 	}
 
-	inputPath := filepath.Join("data/input", g.selectedInputFile)
-	outputPath := filepath.Join("data/output", strings.TrimSuffix(g.selectedInputFile, ".docx")+"_patched.docx")
+	inputPath := filepath.Join(g.rootPath, "data", "input", g.selectedInputFile)
+	outputFile := strings.TrimSuffix(g.selectedInputFile, ".docx") + "_patched.docx"
+	outPath := filepath.Join(g.rootPath, "data", "output", outputFile)
 
-	processor.ApplyPatch(inputPath, patch, outputPath)
-
-	g.refreshOutputFiles()
-	dialog.ShowInformation("Success", fmt.Sprintf("Patched file saved to %s", outputPath), g.win)
-}
-
-func (g *GUI) openOutputFile() {
-	if g.selectedOutputFile == "" {
-		dialog.ShowInformation("Information", "Please select a file to open", g.win)
+	if err := processor.ApplyPatch(inputPath, patch, outPath); err != nil {
+		dialog.ShowError(err, g.win)
 		return
 	}
 
-	filePath := filepath.Join("data/output", g.selectedOutputFile)
+	g.refreshOutputFiles()
+	dialog.ShowInformation("Success", fmt.Sprintf("Patched file saved to %s", outPath), g.win)
+}
 
-	// For Windows
-	cmd := exec.Command("cmd", "/C", "start", filePath)
+func (g *GUI) openInputFolder() {
+	path := filepath.Join(g.rootPath, "data", "input")
+	cmd := exec.Command("explorer", path)
+	if err := cmd.Run(); err != nil {
+		dialog.ShowError(err, g.win)
+	}
+}
 
-	err := cmd.Run()
-	if err != nil {
+func (g *GUI) openOutputFolder() {
+	path := filepath.Join(g.rootPath, "data", "output")
+	cmd := exec.Command("explorer", path)
+	if err := cmd.Run(); err != nil {
 		dialog.ShowError(err, g.win)
 	}
 }
